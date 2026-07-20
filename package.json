@@ -11,6 +11,10 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
+        "prisma:format": "bunx --bun prisma format",
+        "prisma:generate": "bunx --bun prisma generate",
+        "prisma:migrate": "bunx --bun prisma migrate dev",
+        "prisma:studio": "bunx --bun prisma studio",
         "format": "prettier --write \"**/*.{mjs,cjs,js,jsx,ts,tsx,json,css,md}\"",
         "lint": "eslint",
         "prepare": "husky"
@@ -19,6 +23,8 @@
         "**/*.{mjs,cjs,js,jsx,ts,tsx,json,css,md}": "prettier --write"
     },
     "dependencies": {
+        "@prisma/adapter-pg": "^7.9.0",
+        "@prisma/client": "^7.9.0",
         "next": "16.2.10",
         "react": "19.2.4",
         "react-dom": "19.2.4",
@@ -26,7 +32,7 @@
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",
-        "@types/node": "^20",
+        "@types/node": "^26.1.1",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "eslint": "^9",
@@ -35,6 +41,7 @@
         "husky": "^9.1.7",
         "lint-staged": "^17.1.0",
         "prettier": "^3.9.5",
+        "prisma": "^7.9.0",
         "tailwindcss": "^4",
         "typescript": "^5"
     },
