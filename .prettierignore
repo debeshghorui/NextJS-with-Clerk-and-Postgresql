@@ -1,0 +1,12 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+build
+coverage
+
+# Generated / lockfiles
+bun.lock
+next-env.d.ts
