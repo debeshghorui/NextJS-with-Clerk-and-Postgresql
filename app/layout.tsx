@@ -1,6 +1,25 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import {
+    Geist,
+    Geist_Mono,
+    JetBrains_Mono,
+    Merriweather,
+} from 'next/font/google';
+
 import './globals.css';
+
+import { ClerkProvider } from '@clerk/nextjs';
+import { cn } from '@/lib/utils';
+
+const merriweatherHeading = Merriweather({
+    subsets: ['latin'],
+    variable: '--font-heading',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+    subsets: ['latin'],
+    variable: '--font-mono',
+});
 
 const geistSans = Geist({
     variable: '--font-geist-sans',
@@ -23,11 +42,21 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html
-            lang="en"
-            className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-        >
-            <body className="min-h-full flex flex-col">{children}</body>
-        </html>
+        <ClerkProvider>
+            <html
+                lang="en"
+                className={cn(
+                    'h-full',
+                    'antialiased',
+                    geistSans.variable,
+                    geistMono.variable,
+                    'font-mono',
+                    jetbrainsMono.variable,
+                    merriweatherHeading.variable,
+                )}
+            >
+                <body className="min-h-full flex flex-col">{children}</body>
+            </html>
+        </ClerkProvider>
     );
 }
