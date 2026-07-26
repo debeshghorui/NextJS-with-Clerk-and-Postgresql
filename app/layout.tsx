@@ -7,6 +7,7 @@ import {
 } from 'next/font/google';
 
 import './globals.css';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 
 import { ClerkProvider } from '@clerk/nextjs';
 import { cn } from '@/lib/utils';
@@ -42,21 +43,29 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <ClerkProvider>
-            <html
-                lang="en"
-                className={cn(
-                    'h-full',
-                    'antialiased',
-                    geistSans.variable,
-                    geistMono.variable,
-                    'font-mono',
-                    jetbrainsMono.variable,
-                    merriweatherHeading.variable,
-                )}
-            >
-                <body className="min-h-full flex flex-col">{children}</body>
-            </html>
-        </ClerkProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <ClerkProvider>
+                <html
+                    lang="en"
+                    className={cn(
+                        'h-full',
+                        'antialiased',
+                        geistSans.variable,
+                        geistMono.variable,
+                        'font-mono',
+                        jetbrainsMono.variable,
+                        merriweatherHeading.variable,
+                    )}
+                    suppressHydrationWarning
+                >
+                    <body className="min-h-full flex flex-col">{children}</body>
+                </html>
+            </ClerkProvider>
+        </ThemeProvider>
     );
 }
