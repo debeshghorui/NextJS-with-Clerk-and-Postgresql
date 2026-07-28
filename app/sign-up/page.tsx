@@ -5,6 +5,8 @@ import { useSignUp } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 
+const AUTH_REDIRECT_URL = '/dashboard';
+
 function getErrorMessage(error: unknown): string {
     if (typeof error === 'string') {
         return error;
@@ -22,11 +24,23 @@ function getErrorMessage(error: unknown): string {
         }
     }
 
+    if (typeof error === 'object' && error !== null && 'errors' in error) {
+        const errors = (error as { errors?: unknown }).errors;
+
+        if (Array.isArray(errors)) {
+            const firstError = errors[0] as { message?: unknown } | undefined;
+
+            if (typeof firstError?.message === 'string') {
+                return firstError.message;
+            }
+        }
+    }
+
     return 'Something went wrong. Please try again.';
 }
 
 export default function Signup() {
-    const { signUp } = useSignUp();
+    const { signUp, fetchStatus } = useSignUp();
     const router = useRouter();
 
     const [emailAddress, setEmailAddress] = useState('');
@@ -37,7 +51,28 @@ export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isBusy = isSubmitting || !signUp;
+    const isBusy = isSubmitting || fetchStatus === 'fetching' || !signUp;
+
+    async function finalizeSignUp() {
+        if (!signUp) return;
+
+        const { error: finalizeError } = await signUp.finalize({
+            navigate: ({ decorateUrl }) => {
+                const url = decorateUrl(AUTH_REDIRECT_URL);
+
+                if (url.startsWith('http')) {
+                    window.location.href = url;
+                    return;
+                }
+
+                router.push(url);
+            },
+        });
+
+        if (finalizeError) {
+            setError(getErrorMessage(finalizeError));
+        }
+    }
 
     async function submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -48,24 +83,42 @@ export default function Signup() {
         setIsSubmitting(true);
 
         try {
-            const createResult = await signUp.create({
+            const { error: passwordError } = await signUp.password({
                 emailAddress,
                 password,
             });
 
-            if (createResult.error) {
-                setError(getErrorMessage(createResult.error));
+            if (passwordError) {
+                setError(getErrorMessage(passwordError));
                 return;
             }
 
-            const emailResult = await signUp.verifications.sendEmailCode();
-
-            if (emailResult.error) {
-                setError(getErrorMessage(emailResult.error));
+            if (signUp.status === 'complete') {
+                await finalizeSignUp();
                 return;
             }
 
-            setPendingVerification(true);
+            if (signUp.unverifiedFields.includes('email_address')) {
+                const { error: emailCodeError } =
+                    await signUp.verifications.sendEmailCode();
+
+                if (emailCodeError) {
+                    setError(getErrorMessage(emailCodeError));
+                    return;
+                }
+
+                setPendingVerification(true);
+                return;
+            }
+
+            if (signUp.status === 'missing_requirements') {
+                setError(
+                    'This account needs more required details before it can be created.',
+                );
+                return;
+            }
+
+            setError('This sign-up needs another step before it can continue.');
         } catch (err) {
             console.error(err);
             setError(getErrorMessage(err));
@@ -92,23 +145,36 @@ export default function Signup() {
                 return;
             }
 
-            // Email verified successfully
             if (signUp.status === 'complete') {
-                const finalizeResult = await signUp.finalize();
-
-                if (finalizeResult.error) {
-                    setError(getErrorMessage(finalizeResult.error));
-                    return;
-                }
-
-                router.push('/dashboard');
+                await finalizeSignUp();
+                return;
             }
+
+            if (signUp.status === 'missing_requirements') {
+                setError(
+                    'Your email was verified, but this account still needs more details.',
+                );
+                return;
+            }
+
+            setError(
+                'Your email was verified, but sign-up is not complete yet.',
+            );
         } catch (err) {
             console.error(err);
             setError(getErrorMessage(err));
         } finally {
             setIsSubmitting(false);
         }
+    }
+
+    async function resetFlow() {
+        if (!signUp || isSubmitting) return;
+
+        await signUp.reset();
+        setCode('');
+        setError(null);
+        setPendingVerification(false);
     }
 
     if (!signUp) {
@@ -245,8 +311,9 @@ export default function Signup() {
 
                         <button
                             type="button"
-                            onClick={() => setPendingVerification(false)}
-                            className="w-full text-sm text-muted-foreground hover:underline"
+                            onClick={resetFlow}
+                            disabled={isBusy}
+                            className="w-full text-sm text-muted-foreground hover:underline disabled:opacity-50"
                         >
                             Back
                         </button>
