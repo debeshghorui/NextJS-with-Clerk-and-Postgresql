@@ -18,6 +18,10 @@ const envSchema = z.object({
         .string()
         .startsWith('sk_test_')
         .describe('The secret key for the Clerk application'),
+    CLERK_WEBHOOK_SECRET: z
+        .string()
+        .startsWith('whsec_')
+        .describe('The secret key for the Clerk webhook'),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {
