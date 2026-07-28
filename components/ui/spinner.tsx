@@ -1,7 +1,11 @@
 import { cn } from '@/lib/utils';
 import { RiLoaderLine } from '@remixicon/react';
+import type { ComponentPropsWithoutRef } from 'react';
 
-function Spinner({ className, ...props }: React.ComponentProps<'svg'>) {
+function Spinner({
+    className,
+    ...props
+}: Omit<ComponentPropsWithoutRef<'svg'>, 'children'>) {
     return (
         <RiLoaderLine
             data-slot="spinner"

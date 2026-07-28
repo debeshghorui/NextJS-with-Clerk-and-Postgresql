@@ -3,24 +3,49 @@
 import React, { useState } from 'react';
 import { useSignUp } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { Spinner } from '@/components/ui/spinner';
+
+function getErrorMessage(error: unknown): string {
+    if (typeof error === 'string') {
+        return error;
+    }
+
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+        const message = (error as { message?: unknown }).message;
+
+        if (typeof message === 'string') {
+            return message;
+        }
+    }
+
+    return 'Something went wrong. Please try again.';
+}
 
 export default function Signup() {
-    const { signUp, fetchStatus } = useSignUp();
+    const { signUp } = useSignUp();
     const router = useRouter();
 
     const [emailAddress, setEmailAddress] = useState('');
     const [password, setPassword] = useState('');
     const [code, setCode] = useState('');
     const [pendingVerification, setPendingVerification] = useState(false);
-    const [error, setError] = useState<unknown>(null);
+    const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isBusy = isSubmitting || !signUp;
 
     async function submit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
-        if (!signUp || fetchStatus === 'fetching') return;
+        if (!signUp || isSubmitting) return;
 
         setError(null);
+        setIsSubmitting(true);
 
         try {
             const createResult = await signUp.create({
@@ -29,30 +54,33 @@ export default function Signup() {
             });
 
             if (createResult.error) {
-                setError(createResult.error);
+                setError(getErrorMessage(createResult.error));
                 return;
             }
 
             const emailResult = await signUp.verifications.sendEmailCode();
 
             if (emailResult.error) {
-                setError(emailResult.error);
+                setError(getErrorMessage(emailResult.error));
                 return;
             }
 
             setPendingVerification(true);
         } catch (err) {
             console.error(err);
-            setError(err);
+            setError(getErrorMessage(err));
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
     async function onPressVerify(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
-        if (!signUp || fetchStatus === 'fetching') return;
+        if (!signUp || isSubmitting) return;
 
         setError(null);
+        setIsSubmitting(true);
 
         try {
             const verifyResult = await signUp.verifications.verifyEmailCode({
@@ -60,7 +88,7 @@ export default function Signup() {
             });
 
             if (verifyResult.error) {
-                setError(verifyResult.error);
+                setError(getErrorMessage(verifyResult.error));
                 return;
             }
 
@@ -69,7 +97,7 @@ export default function Signup() {
                 const finalizeResult = await signUp.finalize();
 
                 if (finalizeResult.error) {
-                    setError(finalizeResult.error);
+                    setError(getErrorMessage(finalizeResult.error));
                     return;
                 }
 
@@ -77,14 +105,16 @@ export default function Signup() {
             }
         } catch (err) {
             console.error(err);
-            setError(err);
+            setError(getErrorMessage(err));
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
-    if (fetchStatus === 'fetching') {
+    if (!signUp) {
         return (
             <div className="flex min-h-screen items-center justify-center">
-                Loading...
+                <Spinner className="size-8 text-primary" />
             </div>
         );
     }
@@ -162,7 +192,7 @@ export default function Signup() {
 
                         {error && (
                             <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                {JSON.stringify(error)}
+                                {error}
                             </p>
                         )}
 
@@ -170,12 +200,10 @@ export default function Signup() {
 
                         <button
                             type="submit"
-                            disabled={fetchStatus === 'fetching'}
+                            disabled={isBusy}
                             className="w-full rounded-md bg-primary py-2 font-medium text-primary-foreground disabled:opacity-50"
                         >
-                            {fetchStatus === 'fetching'
-                                ? 'Creating account...'
-                                : 'Create account'}
+                            {isBusy ? 'Creating account...' : 'Create account'}
                         </button>
                     </form>
                 ) : (
@@ -203,18 +231,16 @@ export default function Signup() {
 
                         {error && (
                             <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                {JSON.stringify(error)}
+                                {error}
                             </p>
                         )}
 
                         <button
                             type="submit"
-                            disabled={fetchStatus === 'fetching'}
+                            disabled={isBusy}
                             className="w-full rounded-md bg-primary py-2 font-medium text-primary-foreground disabled:opacity-50"
                         >
-                            {fetchStatus === 'fetching'
-                                ? 'Verifying...'
-                                : 'Verify Email'}
+                            {isBusy ? 'Verifying...' : 'Verify Email'}
                         </button>
 
                         <button
