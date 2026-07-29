@@ -40,7 +40,12 @@ export async function POST(req: Request) {
     console.log('Webhook verified successfully:', evt);
     console.log('\n\n');
 
-    const { id } = evt.data;
+    const id = evt.data?.id as string | undefined;
+    if (!id) {
+        console.error('Missing id in webhook event data:', evt.data);
+        return new Response('Missing id in event data', { status: 400 });
+    }
+
     const eventType = evt.type;
 
     // Logs
